@@ -31,12 +31,9 @@ dataset = fetch_20newsgroups(subset='all', categories=categories,\
 
 """
 Question 1: Report the dimensions of the TF-IDF matrix you get. 
-
 """
 vectorizer = TfidfVectorizer(min_df=3, stop_words='english')
 X_tfidf = vectorizer.fit_transform(dataset.data)
-
-
 print(f"Tfidf matrix shape: {X_tfidf.shape}")
 
 """
@@ -82,12 +79,123 @@ Question 4
 """
 n_components = 1000
 svd = TruncatedSVD(n_components=n_components)
-svd.fit(X_tfidf)
+X_svd = svd.fit_transform(X_tfidf)
 percent_var = np.cumsum(svd.explained_variance_ratio_)
 plt.plot(range(1,n_components+1), percent_var)
 plt.xlabel('r')
 plt.ylabel('variance retained')
-plt.show(0)
+#plt.show(0)
+
+""" 
+Question 5: 
+Let 𝑟 be the dimension that we want to reduced the data to (i.e. n_components). 
+Try  𝑟=1,2,3,5,10,20,50,100,300  and plot the five measure scores vs  𝑟  for both SVD and NMF. 
+Report the best 𝑟 choice for SVD and NMF, respectively.
+"""
+
+# Helper function to calculate score metrics. Returns a list with all the scores.
+def calculate_scores(y_true, y_pred):
+  homogeneity = metrics.homogeneity_score(y_true, y_pred)
+  completeness = metrics.completeness_score(y_true, y_pred)
+  v_measure = metrics.v_measure_score(y_true, y_pred)
+  adj_rand = metrics.adjusted_rand_score(y_true, y_pred)
+  adj_mutual_info = metrics.adjusted_mutual_info_score(y_true, y_pred)
+  return [homogeneity, completeness, v_measure, adj_rand, adj_mutual_info]
+
+# Metrics for reduced by SVD data
+# We've already done SVD for the first 1000 components, i.e. we can get the
+# lower r values from X_svd with n_components=1000
+r = [1, 2, 3, 5, 10, 20, 50, 100, 300]
+scores_svd = []
+
+for n_comp in r:
+  km.fit(X_svd[:, :n_comp])
+  
+  # Calculate metrics
+  scores_svd.extend(calculate_scores(labels, km.labels_))
+
+# Plot the data
+scores = ['homegeneity', 'completeness', 'v-measure', 'adjusted rand', 
+           'adjusted mutual info']
+scores_svd_array = np.asarray(scores_svd).reshape(len(r),5)
+#plt.plot(r, scores_svd_array)
+#plt.legend(legend)
+
+# Create pandas dataframe
+scores_svd_df = pd.DataFrame(data=scores_svd_array, index=r, columns=scores)
+scores_svd_df.plot()
+plt.title('K-Mean scores over data reduced by SVD')
+plt.xlabel('$r$')
+plt.ylabel('Score')
+plt.xscale('log')
+plt.show()
+print('\nScores:')
+print(scores_svd_df)
+
+# Metrics for data reduced by NMF
+# Perform k-means clustering
+scores_nmf = []
+for n_comp in r:
+  X_nmf = NMF(n_components=300).fit_transform(X_tfidf)
+  km.fit(X_nmf)
+  
+  # Calculate metrics
+  scores_nmf.extend(calculate_scores(labels, km.labels_))
+
+# Plot results
+scores_nmf_array = np.asarray(scores_nmf).reshape(len(r),5)
+scores_nmf_df = pd.DataFrame(data=scores_nmf_array, index=r, columns=scores)
+#plt.plot(r, scores_nmf_array)
+#plt.legend(legend)
+scores_nmf_df.plot()
+plt.title('K-Mean Scores versus Data Dimensions')
+plt.xlabel('$r$')
+plt.ylabel('Score')
+plt.xscale('log')
+plt.show()
+print('\nScores:')
+print(scores_nmf_df)
+
+"""
+Question 7: Visualization
+"""
+### SVD with its best 'r' value
+# Reduced the term matrix with r=n_components=2 with SVD
+svd = TruncatedSVD(n_components=2)
+X_svd = svd.fit_transform(X_tfidf)
+
+# Use KMeans to find 2 clusters (kmeans defined in question 2) and predict labels
+km.fit(X_svd)
+y_svd = km.predict(X_svd)
+
+# Plot ground truth labels
+plt.scatter(X_svd[:,0], X_svd[:,1], c=labels)
+plt.title('Clusters with ground truth labels for SVD-reduced ($r=2$)')
+plt.show()
+
+# Plot clusters with clustering labels as colors
+plt.scatter(X_svd[:,0], X_svd[:,1], c=y_svd)
+plt.title('Clusters with predicted labels for SVD-reduced data ($r=2$)')
+plt.show()
+
+### NMF with its best 'r' value
+# Reduce the term matrix with r=3 (need to confirm this is the best)
+nmf = NMF(n_components=2)
+X_nmf = nmf.fit_transform(X_tfidf)
+
+# Find clusters and predict labels
+km.fit(X_nmf)
+y_nmf = km.predict(X_nmf)
+
+# Plot ground truth labels
+plt.scatter(X_nmf[:,0], X_nmf[:,1], c=labels)
+plt.title('Clusters with ground truth labels for NMF-reduced data ($r=2$)')
+plt.show()
+
+# Plot clusters with predicted labels
+plt.scatter(X_nmf[:,0], X_nmf[:,1], c=y_svd)
+plt.title('Clusters with predicted labels for NMF-reduced data ($r=2$)')
+plt.show()
 
 """
 In this part we want to examine how purely we can retrieve all 20 original sub-class labels
