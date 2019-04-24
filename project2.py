@@ -136,7 +136,7 @@ print(scores_svd_df)
 # Perform k-means clustering
 scores_nmf = []
 for n_comp in r:
-  X_nmf = NMF(n_components=300).fit_transform(X_tfidf)
+  X_nmf = NMF(n_components=n_comp).fit_transform(X_tfidf)
   km.fit(X_nmf)
   
   # Calculate metrics
