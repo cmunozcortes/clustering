@@ -9,12 +9,16 @@ from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import scale
 from sklearn import metrics
 from sklearn.externals.joblib import Memory
 from sklearn.model_selection import GridSearchCV
 from shutil import rmtree
 from tempfile import mkdtemp
+import pickle
 
+
+load_pickle_results = False
 """
 Loading Dataset
 """
@@ -33,9 +37,16 @@ dataset = fetch_20newsgroups(subset='all', categories=categories,\
 Question 1: Report the dimensions of the TF-IDF matrix you get. 
 """
 vectorizer = TfidfVectorizer(min_df=3, stop_words='english')
-X_tfidf = vectorizer.fit_transform(dataset.data)
-print(f"Tfidf matrix shape: {X_tfidf.shape}")
 
+if (load_pickle_results == True):
+  with open('tfidf.pickle', 'rb') as handle:
+    X_tfidf = pickle.load(handle)
+else:
+  X_tfidf = vectorizer.fit_transform(dataset.data)
+  with open('tfidf.pickle', 'wb') as handle:
+    pickle.dump(X_tfidf, handle, pickle.HIGHEST_PROTOCOL) 
+  
+print(f"Tfidf matrix shape: {X_tfidf.shape}")
 """
 Question 2: 
 
@@ -77,9 +88,14 @@ print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels,
 """
 Question 4
 """
-n_components = 1000
-svd = TruncatedSVD(n_components=n_components)
-X_svd = svd.fit_transform(X_tfidf)
+if (load_pickle_results == True):
+  with open('svd_reduced.pickle', 'rb') as handle:
+    X_svd = pickle.load(handle)
+else:
+  n_components = 1000
+  svd = TruncatedSVD(n_components=n_components)
+  X_svd = svd.fit_transform(X_tfidf)
+
 percent_var = np.cumsum(svd.explained_variance_ratio_)
 plt.plot(range(1,n_components+1), percent_var)
 plt.xlabel('r')
@@ -136,6 +152,7 @@ print(scores_svd_df)
 # Perform k-means clustering
 scores_nmf = []
 for n_comp in r:
+  print('Running NMF with ', n_comp)
   X_nmf = NMF(n_components=n_comp).fit_transform(X_tfidf)
   km.fit(X_nmf)
   
@@ -196,6 +213,42 @@ plt.show()
 plt.scatter(X_nmf[:,0], X_nmf[:,1], c=y_svd)
 plt.title('Clusters with predicted labels for NMF-reduced data ($r=2$)')
 plt.show()
+
+"""
+Question 8: Visualize transformed data
+"""
+
+#### Unit Variance
+# Scale SDV-reduced data
+X_svd_unit_var = scale(X_svd)
+km.fit(X_svd_unit_var)
+print('\nSVD-Reduced Data with Unit Variance:')
+print(calculate_scores(labels, km.labels_))
+
+# Scale NMF-reduced data
+# Scale NMF-scaled data
+X_nmf_unit_var = scale(X_nmf)
+km.fit(X_nmf_unit_var)
+print('\nNMF-Reduced Data with Unit Variance:')
+print(calculate_scores(labels, km.labels_))
+
+#### Log Transformation
+c = 0.01
+
+def log_transform(X, c):
+  return np.multiply(np.sign(X), np.log(np.absolute(X) + c) - np.log(c))
+
+# Log transform for SVD data
+X_svd_log = log_transform(X_svd, c)
+km.fit(X_svd_log)
+print('\nSVD-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Logarithm transformation for NMF data
+X_nmf_log = log_transform(X_nmf, c)
+km.fit(X_nmf_log)
+print('\nNMF-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
 
 """
 In this part we want to examine how purely we can retrieve all 20 original sub-class labels
