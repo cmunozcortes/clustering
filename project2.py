@@ -251,11 +251,11 @@ param_grid = [
   {
     'vect__min_df': [3, 5],
     'reduce_dim': [TruncatedSVD(), NMF()],
-    'reduce_dim__n_components': [5, 20],
+    'reduce_dim__n_components': [2,3,5,10,15,20,25],
   },
 ]
 grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid, 
-                    scoring='accuracy')
+                    scoring='adjusted_rand_score')
 
 grid.fit(dataset.data, dataset.target)
 result = pd.DataFrame(grid.cv_results_)
