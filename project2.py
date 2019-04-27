@@ -12,6 +12,7 @@ from sklearn.preprocessing import Normalizer
 from sklearn import metrics
 from sklearn.externals.joblib import Memory
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import FunctionTransformer
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -231,7 +232,11 @@ print(f"Homogeneity: {metrics.homogeneity_score(labels, km.labels_):.3f}")
 print(f"Completeness: {metrics.completeness_score(labels, km.labels_):.3f}")
 print(f"V-measure: {metrics.v_measure_score(labels, km.labels_):.3f}")
 print(f"Adjusted Rand-Index: {metrics.adjusted_rand_score(labels, km.labels_):.3f}")
-print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_, 'arithmetic')}")
+print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_):.3f}")
+
+cont_table = metrics.cluster.contingency_matrix(labels, km.labels_)
+print("Contingent Table")
+print(cont_table)
 
 """
 Question 12
@@ -259,5 +264,51 @@ grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid,
 
 grid.fit(dataset.data, dataset.target)
 result = pd.DataFrame(grid.cv_results_)
+print(result)
+rmtree(cachedir)
+
+"""
+Question 12 - Alternate DD
+"""
+
+def logTransform(X):
+    c = 0.01
+    return np.sign(X) * (np.log(np.absolute(X) + c)) - np.log(c)
+
+def unitVarTransform(X):
+    return X/X.std(axis=0)
+
+def logUnitVarTransform(X):
+    return logTransform(unitVarTransform(X))
+
+def unitVarLogTransform(X):
+    return unitVarTransform(logTransform(X))
+
+
+cachedir = mkdtemp()
+memory = Memory(location=cachedir, verbose=10)
+pipeline = Pipeline([
+  ('vect', text.TfidfVectorizer(min_df=3, stop_words='english')),
+  ('reduce_dim', TruncatedSVD()),
+  ('transf', FunctionTransformer(logTransform)),
+  ('clf', KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000))
+  ],
+  memory=memory
+)
+
+param_grid = [
+  {
+    'reduce_dim': [TruncatedSVD(), NMF()],
+    'reduce_dim__n_components': [5, 7, 10, 20, 50],
+    'transf': [FunctionTransformer(logTransform), FunctionTransformer(unitVarTransform),
+               FunctionTransformer(logUnitVarTransform), FunctionTransformer(unitVarLogTransform)]
+  },
+]
+grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid,
+                    scoring='accuracy')
+
+grid.fit(dataset.data, dataset.target)
+result = pd.DataFrame(grid.cv_results_)
+result.to_csv("results.csv")
 print(result)
 rmtree(cachedir)
