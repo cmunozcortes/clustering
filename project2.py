@@ -328,36 +328,7 @@ print("Contingent Table")
 print(cont_table)
 
 """
-Question 12
-"""
-cachedir = mkdtemp()
-memory = Memory(location=cachedir, verbose=10)
-pipeline = Pipeline([
-  ('vect', TfidfVectorizer(min_df=3, stop_words='english')),
-  ('reduce_dim', TruncatedSVD()),
-  ('clf', KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000))
-  ]
-  ,
-  memory=memory
-)
-
-param_grid = [
-  {
-    'vect__min_df': [3, 5],
-    'reduce_dim': [TruncatedSVD(), NMF()],
-    'reduce_dim__n_components': [2,3,5,10,15,20,25],
-  },
-]
-grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid, 
-                    scoring='adjusted_rand_score')
-
-grid.fit(dataset.data, dataset.target)
-result = pd.DataFrame(grid.cv_results_)
-print(result)
-rmtree(cachedir)
-
-"""
-Question 12 - Alternate DD
+Question 12 
 """
 
 def logTransform(X):
@@ -399,5 +370,6 @@ grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid,
 grid.fit(dataset.data, dataset.target)
 result = pd.DataFrame(grid.cv_results_)
 result.to_csv("results.csv")
+result.to_pickle("q12.pkl")
 print(result)
 rmtree(cachedir)
