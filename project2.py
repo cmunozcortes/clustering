@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 import random
 import numpy as np
 import pandas as pd 
@@ -85,7 +88,7 @@ percent_var = np.cumsum(svd.explained_variance_ratio_)
 plt.plot(range(1,n_components+1), percent_var)
 plt.xlabel('r')
 plt.ylabel('variance retained')
-#plt.show(0)
+plt.show(0)
 
 """ 
 Question 5: 
@@ -197,6 +200,92 @@ plt.show()
 plt.scatter(X_nmf[:,0], X_nmf[:,1], c=y_svd)
 plt.title('Clusters with predicted labels for NMF-reduced data ($r=2$)')
 plt.show()
+
+"""
+Question 8: Visualize transformed data
+"""
+c = 0.01
+def log_transform(X, c):
+  return np.multiply(np.sign(X), np.log(np.absolute(X) + c) - np.log(c))
+
+def plot_transform(X, y_pred, y_truth, title):
+  fig, axes = plt.subplots(nrows=1, ncols=2)
+  fig.suptitle(title)
+  axes[0].scatter(x=X[:,0], y=X[:,1], c=y_truth)
+  axes[0].set_title('Ground truth labels')
+  axes[1].scatter(x=X[:,0], y=X[:,1], c=y_pred)
+  axes[1].set_title('K-Means predicted labels')
+  #plt.savefig(title + '.png', dpi=300)
+  plt.show()
+  plt.clf()
+
+svd_trans = []
+
+#### Transformations for SVD data
+# Scale SDV-reduced data
+X_svd_unit_var = scale(X_svd)
+km.fit(X_svd_unit_var)
+plt_title = 'SVD-reduced data with unit variance'
+plot_transform(X_svd_unit_var, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data with Unit Variance:')
+print(calculate_scores(labels, km.labels_))
+
+# Log transform for SVD data
+X_svd_log = log_transform(X_svd, c)
+km.fit(X_svd_log)
+plt_title = 'SVD-reduced data with log transform'
+plot_transform(X_svd_log, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Unit variance followed by log transform
+X_svd_comb1 = log_transform(X_svd_unit_var, c)
+km.fit(X_svd_comb1)
+plt_title = 'SVD-reduced data with unit var and log transform'
+plot_transform(X_svd_comb1, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data with Unit Var and Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Log transform followed by unit var
+X_svd_comb2 = scale(X_svd_log)
+km.fit(X_svd_comb2)
+plt_title = 'SVD-reduced data with log transform and unit var'
+plot_transform(X_svd_comb2, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data Log Transform and Unit Var')
+print(calculate_scores(labels, km.labels_))
+
+#### Transformations for NMF-reduced data
+# Scale NMF-reduced data
+X_nmf_unit_var = scale(X_nmf)
+km.fit(X_nmf_unit_var)
+plt_title = 'NMF-reduced data with unit variance'
+plot_transform(X_nmf_unit_var, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data with Unit Variance:')
+print(calculate_scores(labels, km.labels_))
+
+# Logarithm transformation for NMF data
+X_nmf_log = log_transform(X_nmf, c)
+km.fit(X_nmf_log)
+plt_title = 'NMF-reduced data with log transform'
+plot_transform(X_nmf_log, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Unit variance followed by log transform
+X_nmf_comb1 = log_transform(X_nmf_unit_var, c)
+km.fit(X_nmf_comb1)
+plt_title = 'NMF-reduced data with unit var and log transform'
+plot_transform(X_nmf_comb1, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data with Unit Var and Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Log transform followed by unit var
+X_nmf_comb2 = scale(X_nmf_log)
+km.fit(X_nmf_comb2)
+plt_title = 'NMF-reduced data with log transform and unit var'
+plot_transform(X_nmf_comb2, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data Log Transform and Unit Var')
+print(calculate_scores(labels, km.labels_))
 
 """
 In this part we want to examine how purely we can retrieve all 20 original sub-class labels
