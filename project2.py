@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 import random
 import numpy as np
 import pandas as pd 
@@ -17,13 +20,15 @@ from shutil import rmtree
 from tempfile import mkdtemp
 import pickle
 
+# Load pickle file with TF-IDF matrix
+load_pickle_results = True
 
-load_pickle_results = False
 """
 Loading Dataset
 """
 random.seed(42)
 np.random.seed(42)
+np.set_printoptions(precision=4)
 
 categories = ['comp.sys.ibm.pc.hardware', 'comp.graphics',\
               'comp.sys.mac.hardware', 'comp.os.ms-windows.misc',\
@@ -47,6 +52,7 @@ else:
     pickle.dump(X_tfidf, handle, pickle.HIGHEST_PROTOCOL) 
   
 print(f"Tfidf matrix shape: {X_tfidf.shape}")
+
 """
 Question 2: 
 
@@ -57,9 +63,9 @@ vfunc = np.vectorize(lambda target: target // 4)
 labels = vfunc(dataset.target)
 
 km = KMeans(n_clusters=2, random_state=0, n_init=30, max_iter=1000)
-km.fit(X_tfidf)
-print("Contingent Table") 
-print(f"{metrics.cluster.contingency_matrix(labels, km.labels_)}")
+# km.fit(X_tfidf)
+# print("Contingent Table") 
+# print(f"{metrics.cluster.contingency_matrix(labels, km.labels_)}")
 
 """ 
 Question 3
@@ -79,28 +85,30 @@ similarity between the clustering labels and ground truth labels.
 Adjusted mutual information score measures the mutual information
 between the cluster label distribution and the ground truth label distributions.
 """
-print(f"Homogeneity: {metrics.homogeneity_score(labels, km.labels_):.3f}")
-print(f"Completeness: {metrics.completeness_score(labels, km.labels_):.3f}")
-print(f"V-measure: {metrics.v_measure_score(labels, km.labels_):.3f}")
-print(f"Adjusted Rand-Index: {metrics.adjusted_rand_score(labels, km.labels_):.3f}")
-print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_, 'arithmetic')}")
+# print(f"Homogeneity: {metrics.homogeneity_score(labels, km.labels_):.3f}")
+# print(f"Completeness: {metrics.completeness_score(labels, km.labels_):.3f}")
+# print(f"V-measure: {metrics.v_measure_score(labels, km.labels_):.3f}")
+# print(f"Adjusted Rand-Index: {metrics.adjusted_rand_score(labels, km.labels_):.3f}")
+# print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_, 'arithmetic')}")
 
 """
 Question 4
 """
 if (load_pickle_results == True):
-  with open('svd_reduced.pickle', 'rb') as handle:
+  with open('X_svd.pickle', 'rb') as handle:
     X_svd = pickle.load(handle)
 else:
   n_components = 1000
   svd = TruncatedSVD(n_components=n_components)
   X_svd = svd.fit_transform(X_tfidf)
+  with open('X_svd.pickle', 'wb') as handle:
+    pickle.dump(X_svd, handle, pickle.HIGHEST_PROTOCOL) 
 
-percent_var = np.cumsum(svd.explained_variance_ratio_)
-plt.plot(range(1,n_components+1), percent_var)
-plt.xlabel('r')
-plt.ylabel('variance retained')
-#plt.show(0)
+# percent_var = np.cumsum(svd.explained_variance_ratio_)
+# plt.plot(range(1,n_components+1), percent_var)
+# plt.xlabel('r')
+# plt.ylabel('variance retained')
+# plt.show(0)
 
 """ 
 Question 5: 
@@ -116,62 +124,65 @@ def calculate_scores(y_true, y_pred):
   v_measure = metrics.v_measure_score(y_true, y_pred)
   adj_rand = metrics.adjusted_rand_score(y_true, y_pred)
   adj_mutual_info = metrics.adjusted_mutual_info_score(y_true, y_pred)
-  return [homogeneity, completeness, v_measure, adj_rand, adj_mutual_info]
+  return np.asarray([homogeneity, completeness, v_measure, adj_rand, adj_mutual_info])
 
 # Metrics for reduced by SVD data
 # We've already done SVD for the first 1000 components, i.e. we can get the
 # lower r values from X_svd with n_components=1000
-r = [1, 2, 3, 5, 10, 20, 50, 100, 300]
-scores_svd = []
+# r = [1, 2, 3, 5, 10, 20, 50, 100, 300]
+# scores_svd = []
 
-for n_comp in r:
-  km.fit(X_svd[:, :n_comp])
+# for n_comp in r:
+#   km.fit(X_svd[:, :n_comp])
   
-  # Calculate metrics
-  scores_svd.extend(calculate_scores(labels, km.labels_))
+#   # Calculate metrics
+#   scores_svd.extend(calculate_scores(labels, km.labels_))
 
-# Plot the data
-scores = ['homegeneity', 'completeness', 'v-measure', 'adjusted rand', 
-           'adjusted mutual info']
-scores_svd_array = np.asarray(scores_svd).reshape(len(r),5)
-#plt.plot(r, scores_svd_array)
-#plt.legend(legend)
+# # Plot the data
+# scores = ['homegeneity', 'completeness', 'v-measure', 'adjusted rand', 
+#            'adjusted mutual info']
+# scores_svd_array = np.asarray(scores_svd).reshape(len(r),5)
+# #plt.plot(r, scores_svd_array)
+# #plt.legend(legend)
 
-# Create pandas dataframe
-scores_svd_df = pd.DataFrame(data=scores_svd_array, index=r, columns=scores)
-scores_svd_df.plot()
-plt.title('K-Mean scores over data reduced by SVD')
-plt.xlabel('$r$')
-plt.ylabel('Score')
-plt.xscale('log')
-plt.show()
-print('\nScores:')
-print(scores_svd_df)
+# # Create pandas dataframe
+# scores_svd_df = pd.DataFrame(data=scores_svd_array, index=r, columns=scores)
+# scores_svd_df.plot()
+# plt.title('K-Mean scores over data reduced by SVD')
+# plt.xlabel('$r$')
+# plt.ylabel('Score')
+# plt.xscale('log')
+# #plt.show()
+# plt.savefig('kmeans_vs_data_dim_svd.png')
+# print('\nScores:')
+# print(scores_svd_df)
 
 # Metrics for data reduced by NMF
 # Perform k-means clustering
-scores_nmf = []
-for n_comp in r:
-  print('Running NMF with ', n_comp)
-  X_nmf = NMF(n_components=n_comp).fit_transform(X_tfidf)
-  km.fit(X_nmf)
+# scores_nmf = []
+# for n_comp in r:
+#   print('Running NMF with ', n_comp)
+#   X_nmf = NMF(n_components=n_comp).fit_transform(X_tfidf)
+#   km.fit(X_nmf)
   
-  # Calculate metrics
-  scores_nmf.extend(calculate_scores(labels, km.labels_))
+#   # Calculate metrics
+#   scores_nmf.extend(calculate_scores(labels, km.labels_))
 
-# Plot results
-scores_nmf_array = np.asarray(scores_nmf).reshape(len(r),5)
-scores_nmf_df = pd.DataFrame(data=scores_nmf_array, index=r, columns=scores)
-#plt.plot(r, scores_nmf_array)
-#plt.legend(legend)
-scores_nmf_df.plot()
-plt.title('K-Mean Scores versus Data Dimensions')
-plt.xlabel('$r$')
-plt.ylabel('Score')
-plt.xscale('log')
-plt.show()
-print('\nScores:')
-print(scores_nmf_df)
+# # Plot results
+# scores_nmf_array = np.asarray(scores_nmf).reshape(len(r),5)
+# scores_nmf_df = pd.DataFrame(data=scores_nmf_array, index=r, columns=scores)
+# #plt.plot(r, scores_nmf_array)
+# #plt.legend(legend)
+# scores_nmf_df.plot()
+# plt.title('K-Mean Scores versus Data Dimensions')
+# plt.xlabel('$r$')
+# plt.ylabel('Score')
+# plt.xscale('log')
+# #plt.show()
+# plt.savefig('kmeans_vs_data_dim_nmf.png')
+# plt.clf()
+# print('\nScores:')
+# print(scores_nmf_df)
 
 """
 Question 7: Visualization
@@ -188,15 +199,19 @@ y_svd = km.predict(X_svd)
 # Plot ground truth labels
 plt.scatter(X_svd[:,0], X_svd[:,1], c=labels)
 plt.title('Clusters with ground truth labels for SVD-reduced ($r=2$)')
-plt.show()
+#plt.show()
+plt.savefig('svd_r2_gnd_truth.png', dpi=300)
+plt.clf()
 
 # Plot clusters with clustering labels as colors
 plt.scatter(X_svd[:,0], X_svd[:,1], c=y_svd)
 plt.title('Clusters with predicted labels for SVD-reduced data ($r=2$)')
-plt.show()
+#plt.show()
+plt.savefig('svd_r2_pred.png', dpi=300)
+plt.clf()
 
 ### NMF with its best 'r' value
-# Reduce the term matrix with r=3 (need to confirm this is the best)
+# Reduce the term matrix with r=2
 nmf = NMF(n_components=2)
 X_nmf = nmf.fit_transform(X_tfidf)
 
@@ -207,47 +222,99 @@ y_nmf = km.predict(X_nmf)
 # Plot ground truth labels
 plt.scatter(X_nmf[:,0], X_nmf[:,1], c=labels)
 plt.title('Clusters with ground truth labels for NMF-reduced data ($r=2$)')
-plt.show()
+#plt.show()
+plt.savefig('nmf_r2_gnd_truth.png', dpi=300)
+plt.clf()
 
 # Plot clusters with predicted labels
 plt.scatter(X_nmf[:,0], X_nmf[:,1], c=y_svd)
 plt.title('Clusters with predicted labels for NMF-reduced data ($r=2$)')
-plt.show()
+#plt.show()
+plt.savefig('nmf_r2_pred.png', dpi=300)
+plt.clf()
 
 """
 Question 8: Visualize transformed data
 """
+c = 0.01
+def log_transform(X, c):
+  return np.multiply(np.sign(X), np.log(np.absolute(X) + c) - np.log(c))
 
-#### Unit Variance
+def plot_transform(X, y_pred, y_truth, title):
+  fig, axes = plt.subplots(nrows=1, ncols=2)
+  fig.suptitle(title)
+  axes[0].scatter(x=X[:,0], y=X[:,1], c=y_truth)
+  axes[0].set_title('Ground truth labels')
+  axes[1].scatter(x=X[:,0], y=X[:,1], c=y_pred)
+  axes[1].set_title('K-Means predicted labels')
+  plt.savefig(title + '.png', dpi=300)
+  plt.clf()
+
+svd_trans = []
+#### Transformations for SVD data
 # Scale SDV-reduced data
 X_svd_unit_var = scale(X_svd)
 km.fit(X_svd_unit_var)
+plt_title = 'SVD-reduced data with unit variance'
+plot_transform(X_svd_unit_var, km.labels_, labels, plt_title)
 print('\nSVD-Reduced Data with Unit Variance:')
 print(calculate_scores(labels, km.labels_))
-
-# Scale NMF-reduced data
-# Scale NMF-scaled data
-X_nmf_unit_var = scale(X_nmf)
-km.fit(X_nmf_unit_var)
-print('\nNMF-Reduced Data with Unit Variance:')
-print(calculate_scores(labels, km.labels_))
-
-#### Log Transformation
-c = 0.01
-
-def log_transform(X, c):
-  return np.multiply(np.sign(X), np.log(np.absolute(X) + c) - np.log(c))
 
 # Log transform for SVD data
 X_svd_log = log_transform(X_svd, c)
 km.fit(X_svd_log)
+plt_title = 'SVD-reduced data with log transform'
+plot_transform(X_svd_log, km.labels_, labels, plt_title)
 print('\nSVD-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Unit variance followed by log transform
+X_svd_comb1 = log_transform(X_svd_unit_var, c)
+km.fit(X_svd_comb1)
+plt_title = 'SVD-reduced data with unit var and log transform'
+plot_transform(X_svd_comb1, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data with Unit Var and Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Log transform followed by unit var
+X_svd_comb2 = scale(X_svd_log)
+km.fit(X_svd_comb2)
+plt_title = 'SVD-reduced data with log transform and unit var'
+plot_transform(X_svd_comb2, km.labels_, labels, plt_title)
+print('\nSVD-Reduced Data Log Transform and Unit Var')
+print(calculate_scores(labels, km.labels_))
+
+#### Transformations for NMF-reduced data
+# Scale NMF-reduced data
+X_nmf_unit_var = scale(X_nmf)
+km.fit(X_nmf_unit_var)
+plt_title = 'NMF-reduced data with unit variance'
+plot_transform(X_nmf_unit_var, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data with Unit Variance:')
 print(calculate_scores(labels, km.labels_))
 
 # Logarithm transformation for NMF data
 X_nmf_log = log_transform(X_nmf, c)
 km.fit(X_nmf_log)
+plt_title = 'NMF-reduced data with log transform'
+plot_transform(X_nmf_log, km.labels_, labels, plt_title)
 print('\nNMF-Reduced Data with Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Unit variance followed by log transform
+X_nmf_comb1 = log_transform(X_nmf_unit_var, c)
+km.fit(X_nmf_comb1)
+plt_title = 'NMF-reduced data with unit var and log transform'
+plot_transform(X_nmf_comb1, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data with Unit Var and Log Transform')
+print(calculate_scores(labels, km.labels_))
+
+# Log transform followed by unit var
+X_nmf_comb2 = scale(X_nmf_log)
+km.fit(X_nmf_comb2)
+plt_title = 'NMF-reduced data with log transform and unit var'
+plot_transform(X_nmf_comb2, km.labels_, labels, plt_title)
+print('\nNMF-Reduced Data Log Transform and Unit Var')
 print(calculate_scores(labels, km.labels_))
 
 """
@@ -274,43 +341,43 @@ showing what choices are desirable (or undesirable).
 """
 Question 11
 """
-dataset = fetch_20newsgroups(subset='all', shuffle=True, random_state=42)
-labels = dataset.target
-vectorizer = TfidfVectorizer(min_df=3, stop_words='english')
-X_tfidf = vectorizer.fit_transform(dataset.data)
-km = KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000)
-km.fit(X_tfidf)
-print(f"Homogeneity: {metrics.homogeneity_score(labels, km.labels_):.3f}")
-print(f"Completeness: {metrics.completeness_score(labels, km.labels_):.3f}")
-print(f"V-measure: {metrics.v_measure_score(labels, km.labels_):.3f}")
-print(f"Adjusted Rand-Index: {metrics.adjusted_rand_score(labels, km.labels_):.3f}")
-print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_, 'arithmetic')}")
+# dataset = fetch_20newsgroups(subset='all', shuffle=True, random_state=42)
+# labels = dataset.target
+# vectorizer = TfidfVectorizer(min_df=3, stop_words='english')
+# X_tfidf = vectorizer.fit_transform(dataset.data)
+# km = KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000)
+# km.fit(X_tfidf)
+# print(f"Homogeneity: {metrics.homogeneity_score(labels, km.labels_):.3f}")
+# print(f"Completeness: {metrics.completeness_score(labels, km.labels_):.3f}")
+# print(f"V-measure: {metrics.v_measure_score(labels, km.labels_):.3f}")
+# print(f"Adjusted Rand-Index: {metrics.adjusted_rand_score(labels, km.labels_):.3f}")
+# print(f"Adjusted Mutual Information: {metrics.adjusted_mutual_info_score(labels, km.labels_, 'arithmetic')}")
 
-"""
-Question 12
-"""
-cachedir = mkdtemp()
-memory = Memory(location=cachedir, verbose=10)
-pipeline = Pipeline([
-  ('vect', TfidfVectorizer(min_df=3, stop_words='english')),
-  ('reduce_dim', TruncatedSVD()),
-  ('clf', KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000))
-  ]
-  ,
-  memory=memory
-)
+# """
+# Question 12
+# """
+# cachedir = mkdtemp()
+# memory = Memory(location=cachedir, verbose=10)
+# pipeline = Pipeline([
+#   ('vect', TfidfVectorizer(min_df=3, stop_words='english')),
+#   ('reduce_dim', TruncatedSVD()),
+#   ('clf', KMeans(n_clusters=20, random_state=0, n_init=30, max_iter=1000))
+#   ]
+#   ,
+#   memory=memory
+# )
 
-param_grid = [
-  {
-    'vect__min_df': [3, 5],
-    'reduce_dim': [TruncatedSVD(), NMF()],
-    'reduce_dim__n_components': [5, 20],
-  },
-]
-grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid, 
-                    scoring='accuracy')
+# param_grid = [
+#   {
+#     'vect__min_df': [3, 5],
+#     'reduce_dim': [TruncatedSVD(), NMF()],
+#     'reduce_dim__n_components': [5, 20],
+#   },
+# ]
+# grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid, 
+#                     scoring='accuracy')
 
-grid.fit(dataset.data, dataset.target)
-result = pd.DataFrame(grid.cv_results_)
-print(result)
-rmtree(cachedir)
+# grid.fit(dataset.data, dataset.target)
+# result = pd.DataFrame(grid.cv_results_)
+# print(result)
+# rmtree(cachedir)
