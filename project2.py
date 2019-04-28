@@ -19,6 +19,7 @@ from sklearn.model_selection import GridSearchCV
 from shutil import rmtree
 from tempfile import mkdtemp
 import pickle
+import seaborn as sns; sns.set()
 
 # Load pickle file with TF-IDF matrix
 load_pickle_results = True
@@ -300,6 +301,13 @@ plt_title = 'NMF-reduced data with log transform'
 plot_transform(X_nmf_log, km.labels_, labels, plt_title)
 print('\nNMF-Reduced Data with Log Transform')
 print(calculate_scores(labels, km.labels_))
+
+sns.jointplot(x=X_nmf[:,0], y=X_nmf[:,1])
+plt.savefig('orig_data.png', dpi=300)
+plt.clf()
+sns.jointplot(x=X_nmf_log[:,0], y=X_nmf_log[:,1])
+plt.savefig('log_data.png', dpi=300)
+plt.clf()
 
 # Unit variance followed by log transform
 X_nmf_comb1 = log_transform(X_nmf_unit_var, c)
