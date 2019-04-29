@@ -363,7 +363,7 @@ pipeline = Pipeline([
 param_grid = [
   {
     'reduce_dim': [TruncatedSVD(), NMF()],
-    'reduce_dim__n_components': [5, 7, 10, 20, 50, 10, 300],
+    'reduce_dim__n_components': [5, 7, 10, 20, 50, 100, 300],
     'transf': [FunctionTransformer(logTransform), FunctionTransformer(unitVarTransform),
                FunctionTransformer(logUnitVarTransform), FunctionTransformer(unitVarLogTransform)]
   },
