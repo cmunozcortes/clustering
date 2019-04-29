@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import scale
 from sklearn import metrics
 from sklearn.externals.joblib import Memory
 from sklearn.model_selection import GridSearchCV
@@ -224,7 +225,7 @@ svd_trans = []
 
 #### Transformations for SVD data
 # Scale SDV-reduced data
-X_svd_unit_var = scale(X_svd)
+X_svd_unit_var = scale(X=X_svd, with_mean=False)
 km.fit(X_svd_unit_var)
 plt_title = 'SVD-reduced data with unit variance'
 plot_transform(X_svd_unit_var, km.labels_, labels, plt_title)
@@ -248,7 +249,7 @@ print('\nSVD-Reduced Data with Unit Var and Log Transform')
 print(calculate_scores(labels, km.labels_))
 
 # Log transform followed by unit var
-X_svd_comb2 = scale(X_svd_log)
+X_svd_comb2 = scale(X=X_svd_log, with_mean=False)
 km.fit(X_svd_comb2)
 plt_title = 'SVD-reduced data with log transform and unit var'
 plot_transform(X_svd_comb2, km.labels_, labels, plt_title)
@@ -257,7 +258,7 @@ print(calculate_scores(labels, km.labels_))
 
 #### Transformations for NMF-reduced data
 # Scale NMF-reduced data
-X_nmf_unit_var = scale(X_nmf)
+X_nmf_unit_var = scale(X=X_nmf, with_mean=False)
 km.fit(X_nmf_unit_var)
 plt_title = 'NMF-reduced data with unit variance'
 plot_transform(X_nmf_unit_var, km.labels_, labels, plt_title)
@@ -281,7 +282,7 @@ print('\nNMF-Reduced Data with Unit Var and Log Transform')
 print(calculate_scores(labels, km.labels_))
 
 # Log transform followed by unit var
-X_nmf_comb2 = scale(X_nmf_log)
+X_nmf_comb2 = scale(X=X_nmf_log, with_mean=False)
 km.fit(X_nmf_comb2)
 plt_title = 'NMF-reduced data with log transform and unit var'
 plot_transform(X_nmf_comb2, km.labels_, labels, plt_title)
