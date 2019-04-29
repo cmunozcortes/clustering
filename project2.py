@@ -16,6 +16,7 @@ from sklearn import metrics
 from sklearn.externals.joblib import Memory
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import FunctionTransformer
+from scipy.optimize import linear_sum_assignment
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -327,6 +328,9 @@ cont_table = metrics.cluster.contingency_matrix(labels, km.labels_)
 print("Contingent Table")
 print(cont_table)
 
+row_ind, col_ind = linear_sum_assignment((-1*cont_table+1000).transpose())
+# col_ind provides the necessary reshuffling of the cols for optimal predicted labels
+
 """
 Question 12 
 """
@@ -338,10 +342,10 @@ def logTransform(X):
 def unitVarTransform(X):
     return X/X.std(axis=0)
 
-def logUnitVarTransform(X):
+def unitVarLogTransform(X):
     return logTransform(unitVarTransform(X))
 
-def unitVarLogTransform(X):
+def logUnitVarTransform(X):
     return unitVarTransform(logTransform(X))
 
 
@@ -359,13 +363,13 @@ pipeline = Pipeline([
 param_grid = [
   {
     'reduce_dim': [TruncatedSVD(), NMF()],
-    'reduce_dim__n_components': [5, 7, 10, 20, 50],
+    'reduce_dim__n_components': [5, 7, 10, 20, 50, 10, 300],
     'transf': [FunctionTransformer(logTransform), FunctionTransformer(unitVarTransform),
                FunctionTransformer(logUnitVarTransform), FunctionTransformer(unitVarLogTransform)]
   },
 ]
 grid = GridSearchCV(pipeline, cv=5, n_jobs=1, param_grid=param_grid,
-                    scoring='accuracy')
+                    scoring='adjusted_rand_score')
 
 grid.fit(dataset.data, dataset.target)
 result = pd.DataFrame(grid.cv_results_)
