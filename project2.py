@@ -26,6 +26,7 @@ Loading Dataset
 """
 random.seed(42)
 np.random.seed(42)
+np.set_printoptions(precision=3)
 
 categories = ['comp.sys.ibm.pc.hardware', 'comp.graphics',\
               'comp.sys.mac.hardware', 'comp.os.ms-windows.misc',\
@@ -106,7 +107,7 @@ def calculate_scores(y_true, y_pred):
   v_measure = metrics.v_measure_score(y_true, y_pred)
   adj_rand = metrics.adjusted_rand_score(y_true, y_pred)
   adj_mutual_info = metrics.adjusted_mutual_info_score(y_true, y_pred)
-  return [homogeneity, completeness, v_measure, adj_rand, adj_mutual_info]
+  return np.asarray([homogeneity, completeness, v_measure, adj_rand, adj_mutual_info])
 
 # Metrics for reduced by SVD data
 # We've already done SVD for the first 1000 components, i.e. we can get the
